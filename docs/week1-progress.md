@@ -65,6 +65,20 @@
 - Manually tested frozen user behavior
 - Manually tested admin freeze and unfreeze behavior
 
+## Day 6 Completed
+
+- Created manual test cases document
+- Added login test cases
+- Added dashboard test cases
+- Added transfer test cases
+- Added transaction test cases
+- Added admin test cases
+- Added logout test cases
+- Created smoke test checklist
+- Created regression test checklist
+- Created sample bug reports
+- Documented severity, priority, steps, expected result, actual result, and impact
+
 ## Next Step
 
-Day 6: Add manual QA documentation, including manual test cases, smoke checklist, regression checklist, and sample bug reports.
+Day 7: Clean README, add project instructions, add screenshots, and polish GitHub repository for resume use.
