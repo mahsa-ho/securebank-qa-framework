@@ -40,6 +40,19 @@
 - Added freeze and unfreeze user APIs
 - Tested backend APIs using curl
 
+## Day 4 Completed
+
+- Created React frontend using Vite
+- Added React Router navigation
+- Built login page
+- Built customer dashboard page
+- Built transfer money page
+- Built transaction history page
+- Built admin dashboard page
+- Connected frontend to Flask backend APIs
+- Added success, error, and warning messages
+- Manually tested login, transfer, transactions, and admin flows
+
 ## Next Step
 
-Day 4: Build the React frontend pages for login, dashboard, transfer, transactions, and admin.
+Day 5: Improve frontend validation, polish user experience, and prepare the app for QA automation testing.
