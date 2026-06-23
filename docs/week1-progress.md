@@ -1,4 +1,3 @@
-cat > docs/week1-progress.md <<'EOF'
 # Week 1 Progress
 
 ## Day 1 Completed
@@ -27,7 +26,20 @@ cat > docs/week1-progress.md <<'EOF'
 - Wrote user stories with acceptance criteria
 - Prepared requirements for future QA test cases
 
+## Day 3 Completed
+
+- Created Flask backend
+- Created SQLite database schema
+- Added users, accounts, and transactions tables
+- Seeded fake banking users and accounts
+- Added login API
+- Added account API
+- Added transaction API
+- Added transfer money API
+- Added admin users API
+- Added freeze and unfreeze user APIs
+- Tested backend APIs using curl
+
 ## Next Step
 
-Day 3: Build the Flask backend, SQLite database, seed fake users, and create basic API routes.
-EOF
+Day 4: Build the React frontend pages for login, dashboard, transfer, transactions, and admin.

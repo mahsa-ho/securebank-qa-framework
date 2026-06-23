@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+backend/venv/
+backend/.venv/
+backend/securebank.db
+
+# Node / React
+node_modules/
+dist/
+build/
+
+# Environment files
+.env
+
+# Mac
+.DS_Store
+
+# Test reports
+playwright-report/
+test-results/
+coverage/
