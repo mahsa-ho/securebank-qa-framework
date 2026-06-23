@@ -53,6 +53,18 @@
 - Added success, error, and warning messages
 - Manually tested login, transfer, transactions, and admin flows
 
+## Day 5 Completed
+
+- Improved login validation
+- Added loading state for login
+- Improved transfer form validation
+- Added loading state for transfers
+- Disabled transfer button for frozen users
+- Manually tested positive and negative login scenarios
+- Manually tested positive and negative transfer scenarios
+- Manually tested frozen user behavior
+- Manually tested admin freeze and unfreeze behavior
+
 ## Next Step
 
-Day 5: Improve frontend validation, polish user experience, and prepare the app for QA automation testing.
+Day 6: Add manual QA documentation, including manual test cases, smoke checklist, regression checklist, and sample bug reports.

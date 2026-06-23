@@ -8,13 +8,26 @@ function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("mahsa@test.com");
   const [password, setPassword] = useState("Password123");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
+    if (!email.trim()) {
+      setError("Email is required.");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Password is required.");
+      return;
+    }
+
     try {
+      setLoading(true);
       const data = await loginUser(email, password);
+
       localStorage.setItem("securebank_user", JSON.stringify(data.user));
       onLogin(data.user);
 
@@ -25,6 +38,8 @@ function LoginPage({ onLogin }) {
       }
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -53,8 +68,8 @@ function LoginPage({ onLogin }) {
             onChange={(event) => setPassword(event.target.value)}
           />
 
-          <button type="submit" className="primary-button">
-            Login
+          <button type="submit" className="primary-button" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 

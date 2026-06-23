@@ -8,6 +8,7 @@ function TransferPage({ user }) {
   const [description, setDescription] = useState("Test transfer");
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function formatMoney(value) {
     return new Intl.NumberFormat("en-CA", {
@@ -34,7 +35,29 @@ function TransferPage({ user }) {
     setSuccess("");
     setError("");
 
+    if (!recipientAccountNumber.trim()) {
+      setError("Recipient account number is required.");
+      return;
+    }
+
+    if (amount === "") {
+      setError("Amount is required.");
+      return;
+    }
+
+    if (Number(amount) <= 0) {
+      setError("Amount must be greater than 0.");
+      return;
+    }
+
+    if (account?.is_frozen) {
+      setError("Account is frozen. Transfer not allowed.");
+      return;
+    }
+
     try {
+      setLoading(true);
+
       const data = await transferMoney(
         user.id,
         recipientAccountNumber,
@@ -47,6 +70,8 @@ function TransferPage({ user }) {
       await loadAccount();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -99,8 +124,12 @@ function TransferPage({ user }) {
             placeholder="Enter description"
           />
 
-          <button type="submit" className="primary-button">
-            Submit Transfer
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={loading || account.is_frozen}
+          >
+            {loading ? "Processing..." : "Submit Transfer"}
           </button>
         </form>
       </div>
