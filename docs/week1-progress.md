@@ -149,3 +149,22 @@ Day 11: Add admin automation tests for viewing users, freezing accounts, and unf
 ## Next Step
 
 Day 12: Add GitHub Actions CI workflow to run Playwright tests automatically.
+
+## Day 12 Completed
+
+- Created GitHub Actions workflow
+- Added automated CI trigger for pushes and pull requests
+- Configured Python setup for Flask backend
+- Configured Node.js setup for React frontend
+- Added backend database seeding step
+- Added backend server startup step
+- Added frontend server startup step
+- Added Playwright browser installation step
+- Added Playwright test execution step
+- Fixed frontend dependency install step from npm ci to npm install
+- Verified GitHub Actions workflow passed successfully
+
+## Next Step
+
+Day 13: Improve README with automation test results, CI status, and final QA portfolio polish.
+
