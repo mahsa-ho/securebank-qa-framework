@@ -1,55 +1,111 @@
 # SecureBank QA Automation Framework
 
-SecureBank Lite is a mock banking web application created for QA automation practice.
+SecureBank Lite is a mock banking web application created for QA automation and software testing practice.
 
-The goal of this project is to build a realistic banking-style app and then test it using UI automation, API testing, database validation, CI/CD, security testing, and performance testing.
+This project simulates a small banking system with customer login, account dashboard, money transfer, transaction history, and admin account management. It is designed to demonstrate manual QA, test planning, bug reporting, API testing, UI automation, and CI/CD testing skills.
 
-## Project Goal
+---
 
-This project is designed to demonstrate software quality assurance skills for QA, automation testing, and software engineering co-op roles.
+## Project Purpose
 
-## Week 1 Goal
+The purpose of this project is to build a realistic QA portfolio project for software QA, automation testing, and software engineering co-op roles.
 
-Build the mock banking application with:
+The project focuses on:
 
-- Login
-- Customer dashboard
-- Account balance
-- Money transfer
-- Transaction history
-- Admin account management
-- Validation and error messages
+- Manual test case design
+- Smoke testing
+- Regression testing
+- Bug reporting
+- UI testing preparation
+- API testing preparation
+- Backend validation
+- Frontend validation
+- Future automation with Playwright
+- Future CI/CD with GitHub Actions
+
+---
 
 ## Tech Stack
 
+### Frontend
+
 - React
+- Vite
+- React Router
+- CSS
+
+### Backend
+
+- Python
 - Flask
+- Flask-CORS
 - SQLite
-- Playwright
-- GitHub Actions
 
-## Planned QA Features
+### QA / Testing
 
-- UI automation testing
-- API testing
-- Database validation
-- Regression testing
-- Smoke testing
-- GitHub Actions CI pipeline
-- Test reports
-- Bug reports
-- Security testing
-- Performance testing
+- Manual test cases
+- Smoke test checklist
+- Regression test checklist
+- Sample bug reports
+- Planned Playwright automation
+- Planned GitHub Actions CI pipeline
+
+---
+
+## Main Features
+
+### Customer Features
+
+- Customer login
+- View account dashboard
+- View account balance
+- View recent transactions
+- Transfer money to another account
+- Search transactions
+- Filter transactions by type
+- Logout
+
+### Admin Features
+
+- Admin login
+- View all users
+- View customer account status
+- Freeze customer account
+- Unfreeze customer account
+
+### Validation Features
+
+- Empty email validation
+- Empty password validation
+- Invalid login validation
+- Empty transfer amount validation
+- Negative amount validation
+- Insufficient balance validation
+- Invalid recipient validation
+- Transfer to own account validation
+- Frozen account transfer blocking
+
+---
 
 ## Demo Users
 
-| Role | Email | Password |
-|---|---|---|
-| Customer | mahsa@test.com | Password123 |
-| Customer | amir@test.com | Password123 |
-| Frozen User | frozen@test.com | Password123 |
-| Admin | admin@test.com | Admin123 |
+| Role | Email | Password | Status |
+|---|---|---|---|
+| Customer | mahsa@test.com | Password123 | Active |
+| Customer | amir@test.com | Password123 | Active |
+| Customer | frozen@test.com | Password123 | Frozen |
+| Admin | admin@test.com | Admin123 | Active |
 
-## Project Status
+---
 
-Week 1: App setup and basic banking features.
+## How to Run the Project Locally
+
+### 1. Run Backend
+
+Open Terminal 1:
+
+```bash
+cd backend
+source venv/bin/activate
+python seed.py
+python app.py

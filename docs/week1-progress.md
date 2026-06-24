@@ -82,3 +82,20 @@
 ## Next Step
 
 Day 7: Clean README, add project instructions, add screenshots, and polish GitHub repository for resume use.
+
+## Day 8 Completed
+
+- Installed Playwright
+- Created first automated UI test file
+- Added customer login automation test
+- Added admin login automation test
+- Added wrong password negative test
+- Added empty email validation test
+- Added empty password validation test
+- Fixed login page accessibility by connecting labels to input fields
+- Ran Playwright login test suite successfully
+- Verified 5 automated login tests passed in Chromium
+
+## Next Step
+
+Day 9: Add dashboard and transaction automation tests.

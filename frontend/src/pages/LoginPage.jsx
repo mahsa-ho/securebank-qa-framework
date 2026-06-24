@@ -29,15 +29,15 @@ function LoginPage({ onLogin }) {
       const data = await loginUser(email, password);
 
       localStorage.setItem("securebank_user", JSON.stringify(data.user));
-      onLogin(data.user);
+      if (typeof onLogin === "function") onLogin(data.user);
 
-      if (data.user.role === "admin") {
+      if (data.user?.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "Login failed.");
     } finally {
       setLoading(false);
     }
@@ -52,19 +52,23 @@ function LoginPage({ onLogin }) {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <label>Email</label>
+          <label htmlFor="email">Email</label>
           <input
+            id="email"
             type="email"
             value={email}
             placeholder="Enter email"
+            autoComplete="email"
             onChange={(event) => setEmail(event.target.value)}
           />
 
-          <label>Password</label>
+          <label htmlFor="password">Password</label>
           <input
+            id="password"
             type="password"
             value={password}
             placeholder="Enter password"
+            autoComplete="current-password"
             onChange={(event) => setPassword(event.target.value)}
           />
 
@@ -75,9 +79,15 @@ function LoginPage({ onLogin }) {
 
         <div className="demo-box">
           <h3>Demo Users</h3>
-          <p><strong>Customer:</strong> mahsa@test.com / Password123</p>
-          <p><strong>Frozen User:</strong> frozen@test.com / Password123</p>
-          <p><strong>Admin:</strong> admin@test.com / Admin123</p>
+          <p>
+            <strong>Customer:</strong> mahsa@test.com / Password123
+          </p>
+          <p>
+            <strong>Frozen User:</strong> frozen@test.com / Password123
+          </p>
+          <p>
+            <strong>Admin:</strong> admin@test.com / Admin123
+          </p>
         </div>
       </div>
     </div>
