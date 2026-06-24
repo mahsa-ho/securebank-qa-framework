@@ -1,5 +1,7 @@
 # SecureBank QA Automation Framework
 
+[![Playwright Tests](https://github.com/mahsa-ho/securebank-qa-framework/actions/workflows/playwright.yml/badge.svg)](https://github.com/mahsa-ho/securebank-qa-framework/actions/workflows/playwright.yml)
+
 SecureBank Lite is a mock banking web application created for QA automation and software testing practice.
 
 This project simulates a small banking system with customer login, account dashboard, money transfer, transaction history, and admin account management. It is designed to demonstrate manual QA, test planning, bug reporting, API testing, UI automation, and CI/CD testing skills.
@@ -50,6 +52,26 @@ The project focuses on:
 - Planned Playwright automation
 - Planned GitHub Actions CI pipeline
 
+---
+
+## Automation Testing Coverage
+
+Automated UI tests were created using Playwright.
+
+Current automated test coverage includes:
+
+| Test File | Coverage |
+|---|---|
+| login.spec.js | Customer login, admin login, invalid password, empty email, empty password |
+| dashboard.spec.js | Dashboard loading, account balance, account number, recent transactions, navigation |
+| transactions.spec.js | Transaction page loading, transaction table, search, no-results message, type filter |
+| transfer.spec.js | Successful transfer, insufficient balance, zero amount, negative amount, invalid recipient, transfer to own account, frozen user restriction |
+| admin.spec.js | Admin dashboard, user table, freeze user, unfreeze user, customer blocked from admin page |
+
+Total automated tests:
+
+```text
+27 Playwright UI tests
 ---
 
 ## Main Features

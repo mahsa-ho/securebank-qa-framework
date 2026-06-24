@@ -22,3 +22,8 @@ build/
 playwright-report/
 test-results/
 coverage/
+
+# Playwright reports
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/

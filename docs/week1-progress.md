@@ -168,3 +168,17 @@ Day 12: Add GitHub Actions CI workflow to run Playwright tests automatically.
 
 Day 13: Improve README with automation test results, CI status, and final QA portfolio polish.
 
+
+## Day 13 Completed
+
+- Added GitHub Actions status badge to README
+- Added automation testing coverage section
+- Added Playwright test file summary
+- Added CI/CD testing explanation
+- Added resume bullet examples
+- Updated .gitignore for Playwright reports
+- Polished GitHub repository for QA portfolio use
+
+## Next Step
+
+Day 14: Final project review, run all tests one last time, create final resume bullets, and prepare interview explanation.
