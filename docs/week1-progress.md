@@ -99,3 +99,23 @@ Day 7: Clean README, add project instructions, add screenshots, and polish GitHu
 ## Next Step
 
 Day 9: Add dashboard and transaction automation tests.
+
+## Day 9 Completed
+
+- Created dashboard automation test file
+- Added dashboard loading test
+- Added account balance and account number validation test
+- Added recent transactions validation test
+- Added dashboard-to-transfer navigation test
+- Added dashboard-to-transactions navigation test
+- Created transactions automation test file
+- Added transactions page loading test
+- Added transaction table validation test
+- Added transaction search test
+- Added no-results transaction search test
+- Added transaction type filter test
+- Ran login, dashboard, and transactions test suites successfully
+
+## Next Step
+
+Day 10: Add transfer money automation tests for successful transfers and negative transfer validations.
