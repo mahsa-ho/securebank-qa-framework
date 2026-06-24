@@ -119,3 +119,19 @@ Day 9: Add dashboard and transaction automation tests.
 ## Next Step
 
 Day 10: Add transfer money automation tests for successful transfers and negative transfer validations.
+
+## Day 10 Completed
+
+- Created transfer automation test file
+- Added successful money transfer test
+- Added insufficient balance validation test
+- Added zero amount validation test
+- Added negative amount validation test
+- Added invalid recipient account test
+- Added transfer to own account validation test
+- Added frozen user blocked transfer test
+- Ran login, dashboard, transactions, and transfer test suites successfully
+
+## Next Step
+
+Day 11: Add admin automation tests for viewing users, freezing accounts, and unfreezing accounts.
