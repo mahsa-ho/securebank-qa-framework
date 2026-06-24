@@ -135,3 +135,17 @@ Day 10: Add transfer money automation tests for successful transfers and negativ
 ## Next Step
 
 Day 11: Add admin automation tests for viewing users, freezing accounts, and unfreezing accounts.
+
+## Day 11 Completed
+
+- Created admin automation test file
+- Added admin dashboard loading test
+- Added all-users table validation test
+- Added freeze customer account test
+- Added unfreeze customer account test
+- Added customer blocked from admin page test
+- Ran login, dashboard, transactions, transfer, and admin test suites successfully
+
+## Next Step
+
+Day 12: Add GitHub Actions CI workflow to run Playwright tests automatically.
