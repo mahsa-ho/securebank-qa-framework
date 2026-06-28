@@ -1,30 +1,43 @@
-from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from werkzeug.security import check_password_hash
-from database import get_db_connection, init_db
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    jwt_required,
+    get_jwt_identity,
+    get_jwt,
+)
+from datetime import datetime, timedelta
+import sqlite3
 
 app = Flask(__name__)
 CORS(app)
 
+app.config["JWT_SECRET_KEY"] = "securebank-dev-secret-key"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
+
+jwt = JWTManager(app)
+
+DATABASE = "securebank.db"
+
+
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 def row_to_dict(row):
-    return dict(row) if row else None
+    if row is None:
+        return None
+    return dict(row)
 
 
-def get_user_by_id(user_id):
-    connection = get_db_connection()
-    user = connection.execute(
-        "SELECT id, name, email, role, is_frozen FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
-    connection.close()
-    return row_to_dict(user)
-
-
-def is_admin(user_id):
-    user = get_user_by_id(user_id)
-    return user is not None and user["role"] == "admin"
+def require_admin():
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return jsonify({"message": "Admin access required."}), 403
+    return None
 
 
 @app.route("/api/health", methods=["GET"])
@@ -43,99 +56,117 @@ def login():
     password = data.get("password", "").strip()
 
     if not email:
-        return jsonify({"error": "Email is required."}), 400
+        return jsonify({"message": "Email is required."}), 400
 
     if not password:
-        return jsonify({"error": "Password is required."}), 400
+        return jsonify({"message": "Password is required."}), 400
 
-    connection = get_db_connection()
-    user = connection.execute(
-        "SELECT * FROM users WHERE email = ?",
-        (email,)
+    conn = get_db_connection()
+    user = conn.execute(
+        "SELECT * FROM users WHERE email = ? AND password = ?",
+        (email, password),
     ).fetchone()
-    connection.close()
+    conn.close()
 
-    if user is None or not check_password_hash(user["password"], password):
-        return jsonify({"error": "Invalid email or password."}), 401
+    if not user:
+        return jsonify({"message": "Invalid email or password."}), 401
+
+    user_dict = row_to_dict(user)
+
+    access_token = create_access_token(
+        identity=str(user_dict["id"]),
+        additional_claims={
+            "role": user_dict["role"],
+            "email": user_dict["email"],
+        },
+    )
+
+    safe_user = {
+        "id": user_dict["id"],
+        "name": user_dict["name"],
+        "email": user_dict["email"],
+        "role": user_dict["role"],
+        "status": user_dict["status"],
+    }
 
     return jsonify({
-        "message": "Login successful.",
-        "user": {
-            "id": user["id"],
-            "name": user["name"],
-            "email": user["email"],
-            "role": user["role"],
-            "is_frozen": bool(user["is_frozen"])
-        }
+        "user": safe_user,
+        "access_token": access_token
     }), 200
 
 
 @app.route("/api/accounts/<int:user_id>", methods=["GET"])
+@jwt_required()
 def get_account(user_id):
-    connection = get_db_connection()
+    current_user_id = int(get_jwt_identity())
+    claims = get_jwt()
 
-    account = connection.execute("""
-        SELECT accounts.id, accounts.user_id, accounts.account_number, accounts.balance,
-               users.name, users.email, users.role, users.is_frozen
-        FROM accounts
-        JOIN users ON accounts.user_id = users.id
-        WHERE users.id = ?
-    """, (user_id,)).fetchone()
+    if current_user_id != user_id and claims.get("role") != "admin":
+        return jsonify({"message": "Unauthorized access."}), 403
 
-    if account is None:
-        connection.close()
-        return jsonify({"error": "Account not found."}), 404
+    conn = get_db_connection()
 
-    recent_transactions = connection.execute("""
-        SELECT id, type, amount, description, created_at
-        FROM transactions
-        WHERE account_id = ?
-        ORDER BY created_at DESC
-        LIMIT 5
-    """, (account["id"],)).fetchall()
+    account = conn.execute(
+        "SELECT * FROM accounts WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
 
-    connection.close()
+    user = conn.execute(
+        "SELECT id, name, email, role, status FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+
+    conn.close()
+
+    if not account:
+        return jsonify({"message": "Account not found."}), 404
+
+    account_dict = row_to_dict(account)
 
     return jsonify({
-        "account": {
-            "id": account["id"],
-            "user_id": account["user_id"],
-            "name": account["name"],
-            "email": account["email"],
-            "role": account["role"],
-            "is_frozen": bool(account["is_frozen"]),
-            "account_number": account["account_number"],
-            "balance": account["balance"],
-            "recent_transactions": [row_to_dict(t) for t in recent_transactions]
-        }
+        "account": account_dict,
+        "user": row_to_dict(user),
+        "id": account_dict.get("id"),
+        "user_id": account_dict.get("user_id"),
+        "account_number": account_dict.get("account_number"),
+        "balance": account_dict.get("balance"),
     }), 200
 
 
 @app.route("/api/transactions/<int:account_id>", methods=["GET"])
+@jwt_required()
 def get_transactions(account_id):
-    search = request.args.get("search", "").strip()
-    transaction_type = request.args.get("type", "").strip()
+    current_user_id = int(get_jwt_identity())
+    claims = get_jwt()
 
-    query = """
-        SELECT id, account_id, type, amount, description, created_at
+    conn = get_db_connection()
+
+    account = conn.execute(
+        "SELECT * FROM accounts WHERE id = ?",
+        (account_id,),
+    ).fetchone()
+
+    if not account:
+        conn.close()
+        return jsonify({"message": "Account not found."}), 404
+
+    account_dict = row_to_dict(account)
+
+    if account_dict["user_id"] != current_user_id and claims.get("role") != "admin":
+        conn.close()
+        return jsonify({"message": "Unauthorized access."}), 403
+
+    transactions = conn.execute(
+        """
+        SELECT *
         FROM transactions
         WHERE account_id = ?
-    """
-    params = [account_id]
+        ORDER BY id DESC
+        """,
+        (account_id,),
+    ).fetchall()
 
-    if search:
-        query += " AND description LIKE ?"
-        params.append(f"%{search}%")
-
-    if transaction_type and transaction_type.lower() != "all":
-        query += " AND LOWER(type) = LOWER(?)"
-        params.append(transaction_type)
-
-    query += " ORDER BY created_at DESC"
-
-    connection = get_db_connection()
-    transactions = connection.execute(query, params).fetchall()
-    connection.close()
+    conn.close()
 
     return jsonify({
         "transactions": [row_to_dict(transaction) for transaction in transactions]
@@ -143,208 +174,195 @@ def get_transactions(account_id):
 
 
 @app.route("/api/transfer", methods=["POST"])
+@jwt_required()
 def transfer_money():
+    current_user_id = int(get_jwt_identity())
     data = request.get_json() or {}
 
-    user_id = data.get("user_id")
     recipient_account_number = str(data.get("recipient_account_number", "")).strip()
-    amount = data.get("amount")
-    description = data.get("description", "Money transfer").strip()
-
-    if not user_id:
-        return jsonify({"error": "User ID is required."}), 400
-
-    if not recipient_account_number:
-        return jsonify({"error": "Recipient account number is required."}), 400
-
-    if amount in [None, ""]:
-        return jsonify({"error": "Amount is required."}), 400
+    description = data.get("description", "Transfer").strip()
 
     try:
-        amount = float(amount)
-    except ValueError:
-        return jsonify({"error": "Amount must be a valid number."}), 400
+        amount = float(data.get("amount", 0))
+    except (TypeError, ValueError):
+        return jsonify({"message": "Amount must be greater than 0."}), 400
 
     if amount <= 0:
-        return jsonify({"error": "Amount must be greater than 0."}), 400
+        return jsonify({"message": "Amount must be greater than 0."}), 400
 
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    if not recipient_account_number:
+        return jsonify({"message": "Recipient account not found."}), 404
 
-    sender = cursor.execute("""
-        SELECT accounts.id AS account_id, accounts.account_number, accounts.balance,
-               users.id AS user_id, users.is_frozen
-        FROM accounts
-        JOIN users ON accounts.user_id = users.id
-        WHERE users.id = ?
-    """, (user_id,)).fetchone()
+    conn = get_db_connection()
 
-    if sender is None:
-        connection.close()
-        return jsonify({"error": "Sender account not found."}), 404
+    user = conn.execute(
+        "SELECT * FROM users WHERE id = ?",
+        (current_user_id,),
+    ).fetchone()
 
-    if sender["is_frozen"]:
-        connection.close()
-        return jsonify({"error": "Account is frozen. Transfer not allowed."}), 403
+    if not user:
+        conn.close()
+        return jsonify({"message": "User not found."}), 404
 
-    if sender["account_number"] == recipient_account_number:
-        connection.close()
-        return jsonify({"error": "You cannot transfer money to your own account."}), 400
+    user_dict = row_to_dict(user)
 
-    recipient = cursor.execute("""
-        SELECT id, account_number, balance
-        FROM accounts
-        WHERE account_number = ?
-    """, (recipient_account_number,)).fetchone()
+    if user_dict["status"] == "Frozen":
+        conn.close()
+        return jsonify({"message": "Account is frozen. Transfer not allowed."}), 403
 
-    if recipient is None:
-        connection.close()
-        return jsonify({"error": "Recipient account not found."}), 404
+    sender_account = conn.execute(
+        "SELECT * FROM accounts WHERE user_id = ?",
+        (current_user_id,),
+    ).fetchone()
 
-    if sender["balance"] < amount:
-        connection.close()
-        return jsonify({"error": "Insufficient balance."}), 400
+    recipient_account = conn.execute(
+        "SELECT * FROM accounts WHERE account_number = ?",
+        (recipient_account_number,),
+    ).fetchone()
 
-    new_sender_balance = sender["balance"] - amount
-    new_recipient_balance = recipient["balance"] + amount
-    created_at = datetime.now().isoformat()
+    if not sender_account:
+        conn.close()
+        return jsonify({"message": "Sender account not found."}), 404
 
-    cursor.execute(
+    if not recipient_account:
+        conn.close()
+        return jsonify({"message": "Recipient account not found."}), 404
+
+    sender = row_to_dict(sender_account)
+    recipient = row_to_dict(recipient_account)
+
+    if sender["id"] == recipient["id"]:
+        conn.close()
+        return jsonify({"message": "You cannot transfer money to your own account."}), 400
+
+    if float(sender["balance"]) < amount:
+        conn.close()
+        return jsonify({"message": "Insufficient balance."}), 400
+
+    new_sender_balance = float(sender["balance"]) - amount
+    new_recipient_balance = float(recipient["balance"]) + amount
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    conn.execute(
         "UPDATE accounts SET balance = ? WHERE id = ?",
-        (new_sender_balance, sender["account_id"])
+        (new_sender_balance, sender["id"]),
     )
 
-    cursor.execute(
+    conn.execute(
         "UPDATE accounts SET balance = ? WHERE id = ?",
-        (new_recipient_balance, recipient["id"])
+        (new_recipient_balance, recipient["id"]),
     )
 
-    cursor.execute("""
-        INSERT INTO transactions (account_id, type, amount, description, created_at)
+    conn.execute(
+        """
+        INSERT INTO transactions (account_id, type, amount, description, date)
         VALUES (?, ?, ?, ?, ?)
-    """, (sender["account_id"], "Transfer", -amount, description, created_at))
+        """,
+        (sender["id"], "Transfer", -amount, description or "Transfer sent", today),
+    )
 
-    cursor.execute("""
-        INSERT INTO transactions (account_id, type, amount, description, created_at)
+    conn.execute(
+        """
+        INSERT INTO transactions (account_id, type, amount, description, date)
         VALUES (?, ?, ?, ?, ?)
-    """, (recipient["id"], "Transfer", amount, f"Received transfer: {description}", created_at))
+        """,
+        (recipient["id"], "Transfer", amount, "Transfer received", today),
+    )
 
-    connection.commit()
-    connection.close()
+    conn.commit()
+    conn.close()
 
     return jsonify({
         "message": "Transfer completed successfully.",
-        "sender_new_balance": new_sender_balance,
-        "recipient_new_balance": new_recipient_balance
+        "current_balance": new_sender_balance,
     }), 200
 
 
 @app.route("/api/admin/users", methods=["GET"])
-def admin_get_users():
-    admin_user_id = request.args.get("admin_user_id")
+@jwt_required()
+def get_admin_users():
+    admin_error = require_admin()
+    if admin_error:
+        return admin_error
 
-    if not admin_user_id or not is_admin(admin_user_id):
-        return jsonify({"error": "Access denied."}), 403
+    conn = get_db_connection()
 
-    connection = get_db_connection()
-
-    users = connection.execute("""
-        SELECT users.id, users.name, users.email, users.role, users.is_frozen,
-               accounts.account_number, accounts.balance
+    users = conn.execute(
+        """
+        SELECT 
+            users.id,
+            users.name,
+            users.email,
+            users.role,
+            users.status,
+            accounts.account_number,
+            accounts.balance
         FROM users
         LEFT JOIN accounts ON users.id = accounts.user_id
+        WHERE users.role != 'admin'
         ORDER BY users.id
-    """).fetchall()
+        """
+    ).fetchall()
 
-    connection.close()
+    conn.close()
 
     return jsonify({
-        "users": [
-            {
-                **row_to_dict(user),
-                "is_frozen": bool(user["is_frozen"])
-            }
-            for user in users
-        ]
+        "users": [row_to_dict(user) for user in users]
     }), 200
 
 
 @app.route("/api/admin/freeze-user", methods=["POST"])
+@jwt_required()
 def freeze_user():
-    data = request.get_json() or {}
+    admin_error = require_admin()
+    if admin_error:
+        return admin_error
 
-    admin_user_id = data.get("admin_user_id")
+    data = request.get_json() or {}
     user_id = data.get("user_id")
 
-    if not admin_user_id or not is_admin(admin_user_id):
-        return jsonify({"error": "Access denied."}), 403
-
     if not user_id:
-        return jsonify({"error": "User ID is required."}), 400
+        return jsonify({"message": "User ID is required."}), 400
 
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    conn = get_db_connection()
 
-    user = cursor.execute(
-        "SELECT id, role FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
-
-    if user is None:
-        connection.close()
-        return jsonify({"error": "User not found."}), 404
-
-    if user["role"] == "admin":
-        connection.close()
-        return jsonify({"error": "Admin accounts cannot be frozen."}), 400
-
-    cursor.execute(
-        "UPDATE users SET is_frozen = 1 WHERE id = ?",
-        (user_id,)
+    conn.execute(
+        "UPDATE users SET status = 'Frozen' WHERE id = ? AND role != 'admin'",
+        (user_id,),
     )
 
-    connection.commit()
-    connection.close()
+    conn.commit()
+    conn.close()
 
     return jsonify({"message": "User account frozen successfully."}), 200
 
 
 @app.route("/api/admin/unfreeze-user", methods=["POST"])
+@jwt_required()
 def unfreeze_user():
-    data = request.get_json() or {}
+    admin_error = require_admin()
+    if admin_error:
+        return admin_error
 
-    admin_user_id = data.get("admin_user_id")
+    data = request.get_json() or {}
     user_id = data.get("user_id")
 
-    if not admin_user_id or not is_admin(admin_user_id):
-        return jsonify({"error": "Access denied."}), 403
-
     if not user_id:
-        return jsonify({"error": "User ID is required."}), 400
+        return jsonify({"message": "User ID is required."}), 400
 
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    conn = get_db_connection()
 
-    user = cursor.execute(
-        "SELECT id FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
-
-    if user is None:
-        connection.close()
-        return jsonify({"error": "User not found."}), 404
-
-    cursor.execute(
-        "UPDATE users SET is_frozen = 0 WHERE id = ?",
-        (user_id,)
+    conn.execute(
+        "UPDATE users SET status = 'Active' WHERE id = ? AND role != 'admin'",
+        (user_id,),
     )
 
-    connection.commit()
-    connection.close()
+    conn.commit()
+    conn.close()
 
     return jsonify({"message": "User account unfrozen successfully."}), 200
 
 
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True, port=5001)

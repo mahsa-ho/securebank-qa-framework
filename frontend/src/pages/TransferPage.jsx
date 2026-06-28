@@ -1,137 +1,130 @@
 import { useEffect, useState } from "react";
 import { getAccount, transferMoney } from "../api/api";
 
-function TransferPage({ user }) {
+function TransferPage({ user, currentUser }) {
+  const loggedInUser =
+    user ||
+    currentUser ||
+    JSON.parse(localStorage.getItem("securebank_user") || "null");
+
   const [account, setAccount] = useState(null);
-  const [recipientAccountNumber, setRecipientAccountNumber] = useState("10010002");
+  const [recipientAccountNumber, setRecipientAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("Test transfer");
-  const [success, setSuccess] = useState("");
+  const [description, setDescription] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function formatMoney(value) {
-    return new Intl.NumberFormat("en-CA", {
+  useEffect(() => {
+    async function loadAccount() {
+      try {
+        setError("");
+
+        if (!loggedInUser?.id) {
+          setError("User session not found. Please log in again.");
+          return;
+        }
+
+        const data = await getAccount(loggedInUser.id);
+        setAccount(data.account || data);
+      } catch (err) {
+        setError(err.message || "Something went wrong.");
+      }
+    }
+
+    loadAccount();
+  }, [loggedInUser?.id]);
+
+  function formatCurrency(value) {
+    return Number(value || 0).toLocaleString("en-CA", {
       style: "currency",
       currency: "CAD",
-    }).format(value);
+    });
   }
-
-  async function loadAccount() {
-    try {
-      const data = await getAccount(user.id);
-      setAccount(data.account);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  useEffect(() => {
-    loadAccount();
-  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setSuccess("");
+    setMessage("");
     setError("");
-
-    if (!recipientAccountNumber.trim()) {
-      setError("Recipient account number is required.");
-      return;
-    }
-
-    if (amount === "") {
-      setError("Amount is required.");
-      return;
-    }
-
-    if (Number(amount) <= 0) {
-      setError("Amount must be greater than 0.");
-      return;
-    }
-
-    if (account?.is_frozen) {
-      setError("Account is frozen. Transfer not allowed.");
-      return;
-    }
 
     try {
       setLoading(true);
 
-      const data = await transferMoney(
-        user.id,
-        recipientAccountNumber,
-        amount,
-        description
-      );
+      const data = await transferMoney({
+        recipient_account_number: recipientAccountNumber,
+        amount: amount,
+        description: description,
+      });
 
-      setSuccess(data.message);
+      setMessage(data.message || "Transfer completed successfully.");
+
+      const updatedAccount = await getAccount(loggedInUser.id);
+      setAccount(updatedAccount.account || updatedAccount);
+
+      setRecipientAccountNumber("");
       setAmount("");
-      await loadAccount();
+      setDescription("");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   }
 
-  if (!account) {
-    return <div className="page">Loading transfer page...</div>;
-  }
-
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Transfer Money</h1>
-        <p>Send money to another SecureBank account.</p>
-      </div>
+      <h1>Transfer Money</h1>
+      <p>Send money to another SecureBank account.</p>
 
       <div className="card">
-        <h2>Current Balance: {formatMoney(account.balance)}</h2>
-        <p>Account Number: {account.account_number}</p>
+        <h2>Current Balance: {formatCurrency(account?.balance)}</h2>
+        <p>Account Number: {account?.account_number}</p>
 
-        {account.is_frozen && (
-          <div className="warning-message">
-            Account is frozen. Transfer not allowed.
-          </div>
-        )}
-
-        {success && <div className="success-message">{success}</div>}
+        {message && <div className="success-message">{message}</div>}
         {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
-          <label>Recipient Account Number</label>
-          <input
-            type="text"
-            value={recipientAccountNumber}
-            onChange={(event) => setRecipientAccountNumber(event.target.value)}
-            placeholder="Example: 10010002"
-          />
+        {loggedInUser?.status === "Frozen" ? (
+          <div className="error-message">
+            Account is frozen. Transfer not allowed.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="recipient">Recipient Account Number</label>
+            <input
+              id="recipient"
+              value={recipientAccountNumber}
+              placeholder="Example: 10010002"
+              onChange={(event) =>
+                setRecipientAccountNumber(event.target.value)
+              }
+            />
 
-          <label>Amount</label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder="Enter amount"
-          />
+            <label htmlFor="amount">Amount</label>
+            <input
+              id="amount"
+              type="number"
+              value={amount}
+              placeholder="Enter amount"
+              onChange={(event) => setAmount(event.target.value)}
+            />
 
-          <label>Description</label>
-          <input
-            type="text"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Enter description"
-          />
+            <label htmlFor="description">Description</label>
+            <input
+              id="description"
+              value={description}
+              placeholder="Enter description"
+              onChange={(event) => setDescription(event.target.value)}
+            />
 
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={loading || account.is_frozen}
-          >
-            {loading ? "Processing..." : "Submit Transfer"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={loading}
+            >
+              {loading ? "Submitting..." : "Submit Transfer"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

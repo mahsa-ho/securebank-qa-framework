@@ -29,15 +29,17 @@ function LoginPage({ onLogin }) {
       const data = await loginUser(email, password);
 
       localStorage.setItem("securebank_user", JSON.stringify(data.user));
-      if (typeof onLogin === "function") onLogin(data.user);
+      localStorage.setItem("securebank_token", data.access_token);
 
-      if (data.user?.role === "admin") {
+      onLogin(data.user);
+
+      if (data.user.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError(err?.message || "Login failed.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }

@@ -3,19 +3,35 @@ import { test, expect } from "@playwright/test";
 const BASE_URL = "http://localhost:5173/";
 const API_URL = "http://127.0.0.1:5001/api";
 
-async function resetAdminTestData(request) {
-  // Reset Amir to active
-  await request.post(`${API_URL}/admin/unfreeze-user`, {
+async function getAdminToken(request) {
+  const response = await request.post(`${API_URL}/login`, {
     data: {
-      admin_user_id: 4,
+      email: "admin@test.com",
+      password: "Admin123",
+    },
+  });
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+async function resetAdminTestData(request) {
+  const token = await getAdminToken(request);
+
+  await request.post(`${API_URL}/admin/unfreeze-user`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    data: {
       user_id: 2,
     },
   });
 
-  // Reset Frozen User to frozen
   await request.post(`${API_URL}/admin/freeze-user`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
     data: {
-      admin_user_id: 4,
       user_id: 3,
     },
   });

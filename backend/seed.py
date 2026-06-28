@@ -1,70 +1,85 @@
-from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash
-from database import get_db_connection, init_db
+import sqlite3
 
+DATABASE = "securebank.db"
 
-def seed_database():
-    init_db()
-    connection = get_db_connection()
-    cursor = connection.cursor()
+conn = sqlite3.connect(DATABASE)
+cursor = conn.cursor()
 
-    # Clear old data
-    cursor.execute("DELETE FROM transactions")
-    cursor.execute("DELETE FROM accounts")
-    cursor.execute("DELETE FROM users")
+cursor.execute("DROP TABLE IF EXISTS transactions")
+cursor.execute("DROP TABLE IF EXISTS accounts")
+cursor.execute("DROP TABLE IF EXISTS users")
 
-    # Reset IDs
-    cursor.execute("DELETE FROM sqlite_sequence WHERE name='transactions'")
-    cursor.execute("DELETE FROM sqlite_sequence WHERE name='accounts'")
-    cursor.execute("DELETE FROM sqlite_sequence WHERE name='users'")
+cursor.execute("""
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL,
+    status TEXT NOT NULL
+)
+""")
 
-    users = [
-        ("Mahsa Customer", "mahsa@test.com", generate_password_hash("Password123"), "customer", 0),
-        ("Amir Customer", "amir@test.com", generate_password_hash("Password123"), "customer", 0),
-        ("Frozen User", "frozen@test.com", generate_password_hash("Password123"), "customer", 1),
-        ("Admin User", "admin@test.com", generate_password_hash("Admin123"), "admin", 0),
-    ]
+cursor.execute("""
+CREATE TABLE accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    account_number TEXT UNIQUE NOT NULL,
+    balance REAL NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)
+""")
 
-    cursor.executemany("""
-        INSERT INTO users (name, email, password, role, is_frozen)
-        VALUES (?, ?, ?, ?, ?)
-    """, users)
+cursor.execute("""
+CREATE TABLE transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    amount REAL NOT NULL,
+    description TEXT NOT NULL,
+    date TEXT NOT NULL,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+)
+""")
 
-    accounts = [
-        (1, "10010001", 2500.00),
-        (2, "10010002", 1200.00),
-        (3, "10010003", 800.00),
-        (4, "90090001", 0.00),
-    ]
+users = [
+    ("Mahsa Customer", "mahsa@test.com", "Password123", "customer", "Active"),
+    ("Amir Customer", "amir@test.com", "Password123", "customer", "Active"),
+    ("Frozen User", "frozen@test.com", "Password123", "customer", "Frozen"),
+    ("Admin User", "admin@test.com", "Admin123", "admin", "Active"),
+]
 
-    cursor.executemany("""
-        INSERT INTO accounts (user_id, account_number, balance)
-        VALUES (?, ?, ?)
-    """, accounts)
+cursor.executemany("""
+INSERT INTO users (name, email, password, role, status)
+VALUES (?, ?, ?, ?, ?)
+""", users)
 
-    now = datetime.now()
+accounts = [
+    (1, "10010001", 2500.00),
+    (2, "10010002", 1800.00),
+    (3, "10010003", 900.00),
+]
 
-    transactions = [
-        (1, "Deposit", 2500.00, "Initial account deposit", (now - timedelta(days=10)).isoformat()),
-        (1, "Withdrawal", -120.00, "Grocery purchase", (now - timedelta(days=7)).isoformat()),
-        (1, "Transfer", -50.00, "Transfer to Amir", (now - timedelta(days=3)).isoformat()),
+cursor.executemany("""
+INSERT INTO accounts (user_id, account_number, balance)
+VALUES (?, ?, ?)
+""", accounts)
 
-        (2, "Deposit", 1200.00, "Initial account deposit", (now - timedelta(days=8)).isoformat()),
-        (2, "Transfer", 50.00, "Transfer from Mahsa", (now - timedelta(days=3)).isoformat()),
+transactions = [
+    (1, "Deposit", 2500.00, "Initial account deposit", "2026-06-01"),
+    (1, "Debit", -75.50, "Grocery purchase", "2026-06-05"),
+    (1, "Transfer", -100.00, "Transfer to Amir", "2026-06-10"),
+    (2, "Deposit", 1800.00, "Initial account deposit", "2026-06-01"),
+    (2, "Transfer", 100.00, "Transfer received", "2026-06-10"),
+    (3, "Deposit", 900.00, "Initial account deposit", "2026-06-01"),
+]
 
-        (3, "Deposit", 800.00, "Initial account deposit", (now - timedelta(days=5)).isoformat()),
-    ]
+cursor.executemany("""
+INSERT INTO transactions (account_id, type, amount, description, date)
+VALUES (?, ?, ?, ?, ?)
+""", transactions)
 
-    cursor.executemany("""
-        INSERT INTO transactions (account_id, type, amount, description, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, transactions)
+conn.commit()
+conn.close()
 
-    connection.commit()
-    connection.close()
-
-    print("Database created and seeded successfully.")
-
-
-if __name__ == "__main__":
-    seed_database()
+print("Database created and seeded successfully.")

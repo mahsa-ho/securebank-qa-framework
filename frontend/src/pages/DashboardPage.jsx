@@ -1,95 +1,109 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getAccount } from "../api/api";
+import { getAccount, getTransactions } from "../api/api";
 
-function DashboardPage({ user }) {
+function DashboardPage({ user, currentUser }) {
+  const loggedInUser =
+    user ||
+    currentUser ||
+    JSON.parse(localStorage.getItem("securebank_user") || "null");
+
   const [account, setAccount] = useState(null);
+  const [transactions, setTransactions] = useState([]);
   const [error, setError] = useState("");
-
-  function formatMoney(amount) {
-    return new Intl.NumberFormat("en-CA", {
-      style: "currency",
-      currency: "CAD",
-    }).format(amount);
-  }
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadAccount() {
+    async function loadDashboard() {
       try {
-        const data = await getAccount(user.id);
-        setAccount(data.account);
+        setError("");
+        setLoading(true);
+
+        if (!loggedInUser?.id) {
+          setError("User session not found. Please log in again.");
+          return;
+        }
+
+        const accountData = await getAccount(loggedInUser.id);
+        const accountInfo = accountData.account || accountData;
+
+        setAccount(accountInfo);
+
+        const transactionData = await getTransactions(accountInfo.id);
+        setTransactions(transactionData.transactions || []);
       } catch (err) {
-        setError(err.message);
+        setError(err.message || "Something went wrong.");
+        setTransactions([]);
+      } finally {
+        setLoading(false);
       }
     }
 
-    loadAccount();
-  }, [user.id]);
+    loadDashboard();
+  }, [loggedInUser?.id]);
 
-  if (error) {
-    return <div className="page"><div className="error-message">{error}</div></div>;
+  function formatCurrency(amount) {
+    return Number(amount || 0).toLocaleString("en-CA", {
+      style: "currency",
+      currency: "CAD",
+    });
   }
 
-  if (!account) {
-    return <div className="page">Loading dashboard...</div>;
+  if (loading) {
+    return (
+      <div className="page">
+        <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page">
+        <div className="error-message">{error}</div>
+      </div>
+    );
   }
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Customer Dashboard</h1>
-        <p>Welcome back, {account.name}</p>
-      </div>
-
-      {account.is_frozen && (
-        <div className="warning-message">
-          This account is frozen. Transfers are not allowed.
-        </div>
-      )}
+      <h1>Customer Dashboard</h1>
+      <p>Welcome back, {loggedInUser?.name}</p>
 
       <div className="dashboard-grid">
         <div className="card">
           <h2>Account Balance</h2>
-          <p className="balance">{formatMoney(account.balance)}</p>
-          <p>Account Number: {account.account_number}</p>
+          <p>Account Number: {account?.account_number}</p>
+          <p className="balance">{formatCurrency(account?.balance)}</p>
         </div>
 
         <div className="card">
-          <h2>Quick Actions</h2>
-          <div className="button-row">
-            <Link to="/transfer" className="primary-link">Transfer Money</Link>
-            <Link to="/transactions" className="secondary-link">View Transactions</Link>
-          </div>
-        </div>
-      </div>
+          <h2>Recent Transactions</h2>
 
-      <div className="card">
-        <h2>Recent Transactions</h2>
-
-        {account.recent_transactions.length === 0 ? (
-          <p>No transactions found.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {account.recent_transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td>{new Date(transaction.created_at).toLocaleDateString()}</td>
-                  <td>{transaction.type}</td>
-                  <td>{transaction.description}</td>
-                  <td>{formatMoney(transaction.amount)}</td>
+          {(transactions || []).length === 0 ? (
+            <p>No recent transactions found.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th>Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {(transactions || []).slice(0, 5).map((transaction) => (
+                  <tr key={transaction.id}>
+                    <td>{transaction.date}</td>
+                    <td>{transaction.type}</td>
+                    <td>{transaction.description}</td>
+                    <td>{formatCurrency(transaction.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );

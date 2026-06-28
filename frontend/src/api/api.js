@@ -1,10 +1,19 @@
 const API_BASE_URL = "http://127.0.0.1:5001/api";
 
+function getAuthHeaders() {
+  const token = localStorage.getItem("securebank_token");
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 async function handleResponse(response) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || "Something went wrong.");
+    throw new Error(data.message || "Something went wrong.");
   }
 
   return data;
@@ -23,72 +32,57 @@ export async function loginUser(email, password) {
 }
 
 export async function getAccount(userId) {
-  const response = await fetch(`${API_BASE_URL}/accounts/${userId}`);
+  const response = await fetch(`${API_BASE_URL}/accounts/${userId}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
   return handleResponse(response);
 }
 
-export async function getTransactions(accountId, search = "", type = "all") {
-  const params = new URLSearchParams();
+export async function getTransactions(accountId) {
+  const response = await fetch(`${API_BASE_URL}/transactions/${accountId}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
 
-  if (search) {
-    params.append("search", search);
-  }
-
-  if (type) {
-    params.append("type", type);
-  }
-
-  const response = await fetch(`${API_BASE_URL}/transactions/${accountId}?${params}`);
   return handleResponse(response);
 }
 
-export async function transferMoney(userId, recipientAccountNumber, amount, description) {
+export async function transferMoney(transferData) {
   const response = await fetch(`${API_BASE_URL}/transfer`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      recipient_account_number: recipientAccountNumber,
-      amount,
-      description,
-    }),
+    headers: getAuthHeaders(),
+    body: JSON.stringify(transferData),
   });
 
   return handleResponse(response);
 }
 
-export async function getAdminUsers(adminUserId) {
-  const response = await fetch(`${API_BASE_URL}/admin/users?admin_user_id=${adminUserId}`);
+export async function getAdminUsers() {
+  const response = await fetch(`${API_BASE_URL}/admin/users`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
   return handleResponse(response);
 }
 
-export async function freezeUser(adminUserId, userId) {
+export async function freezeUser(userId) {
   const response = await fetch(`${API_BASE_URL}/admin/freeze-user`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      admin_user_id: adminUserId,
-      user_id: userId,
-    }),
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ user_id: userId }),
   });
 
   return handleResponse(response);
 }
 
-export async function unfreezeUser(adminUserId, userId) {
+export async function unfreezeUser(userId) {
   const response = await fetch(`${API_BASE_URL}/admin/unfreeze-user`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      admin_user_id: adminUserId,
-      user_id: userId,
-    }),
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ user_id: userId }),
   });
 
   return handleResponse(response);
