@@ -1,3 +1,4 @@
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import (
@@ -13,7 +14,7 @@ import sqlite3
 app = Flask(__name__)
 CORS(app)
 
-app.config["JWT_SECRET_KEY"] = "securebank-dev-secret-key"
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "securebank-dev-secret-key")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
 
 jwt = JWTManager(app)
